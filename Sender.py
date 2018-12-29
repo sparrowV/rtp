@@ -1,6 +1,6 @@
 import sys
 import getopt
-
+import os
 import Checksum
 import BasicSender
 
@@ -13,11 +13,83 @@ class Sender(BasicSender.BasicSender):
         self.sackMode = sackMode
         self.debug = debug
 
+
     # Main sending loop.
     def start(self):
-      # add things here
-      pass
-        
+
+        initilize = self.make_packet("syn",0,"")
+      #  print("self",self.infile)
+        self.send(initilize)
+        rec_init = self.receive(1)
+        seq_num = 0
+        sack_mode = True
+        if(rec_init != None):
+            rec_init_list = rec_init.split("|")
+            rec_type = rec_init_list[0]
+            if(rec_type !="sack"):
+
+              seq_num = int(rec_init_list[1])
+            else:
+                seq_num = 1
+
+
+        while(seq_num == 0):
+            initilize = self.make_packet("syn", 0, "")
+            #  print("self",self.infile)
+            self.send(initilize)
+
+            rec_init = self.receive(1)
+            if(rec_init != None):
+                rec_init_list = rec_init.split("|")
+
+                seq_num = int(rec_init_list[1])
+
+
+        packets = [0]
+        while True:
+            data = self.infile.read(1450)
+            packets.append( data)
+            if(len(data) < 1450):
+                break
+
+
+
+
+
+        while True:
+            data = packets[seq_num]
+         #   print("data",data)
+     #       print("seq",seq_num)
+            if(len(data) < 1450):
+
+                end = self.make_packet("fin", seq_num, data)
+                self.send(end)
+                end_ack = self.receive(1)
+                if(end_ack!=None):
+                    rec_end_list = end_ack.split("|")
+
+                    seq_num = int(rec_end_list[1])
+                    break
+               # dat2 = self.receive()
+
+            else:
+                dat = self.make_packet("dat", seq_num, packets[seq_num])
+                self.send(dat)
+                data_ack = self.receive(1)
+                if(data_ack !=None):
+                    print(data_ack)
+                    rec_data_list = data_ack.split("|")
+
+                    seq_num = int(rec_data_list[1])
+
+
+
+
+
+
+
+
+
 '''
 This will be run if you run this script from the command line. You should not
 change any of this; the grader may rely on the behavior here to test your
@@ -32,6 +104,7 @@ if __name__ == "__main__":
         print "-d | --debug Print debug messages"
         print "-h | --help Print this usage message"
         print "-k | --sack Enable selective acknowledgement mode"
+
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],
@@ -50,6 +123,7 @@ if __name__ == "__main__":
         if o in ("-f", "--file="):
             filename = a
         elif o in ("-p", "--port="):
+
             port = int(a)
         elif o in ("-a", "--address="):
             dest = a

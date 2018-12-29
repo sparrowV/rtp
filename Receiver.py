@@ -73,6 +73,7 @@ class Receiver():
         while True:
             try:
                 message, address = self.receive()
+
                 msg_type, seqno, data, checksum = self._split_message(message)
                 try:
                     seqno = int(seqno)
