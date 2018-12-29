@@ -20,9 +20,9 @@ class Sender(BasicSender.BasicSender):
         initilize = self.make_packet("syn",0,"")
       #  print("self",self.infile)
         self.send(initilize)
-        rec_init = self.receive(1)
+        rec_init = self.receive(0.5)
         seq_num = 0
-        sack_mode = True
+        sack_mode = False
         if(rec_init != None):
             rec_init_list = rec_init.split("|")
             rec_type = rec_init_list[0]
@@ -30,6 +30,7 @@ class Sender(BasicSender.BasicSender):
 
               seq_num = int(rec_init_list[1])
             else:
+                sack_mode = True
                 seq_num = 1
 
 
@@ -38,11 +39,20 @@ class Sender(BasicSender.BasicSender):
             #  print("self",self.infile)
             self.send(initilize)
 
-            rec_init = self.receive(1)
+            rec_init = self.receive(0.5)
             if(rec_init != None):
-                rec_init_list = rec_init.split("|")
 
-                seq_num = int(rec_init_list[1])
+                rec_init_list = rec_init.split("|")
+                if( rec_init_list[0]!="sack"):
+
+
+                    seq_num = int(rec_init_list[1])
+                else:
+                    sack_mode = True
+                    semicollon = rec_init_list[1].find(';')
+
+                    seq_num = int(rec_init_list[1][:semicollon])
+
 
 
         packets = [0]
@@ -64,23 +74,36 @@ class Sender(BasicSender.BasicSender):
 
                 end = self.make_packet("fin", seq_num, data)
                 self.send(end)
-                end_ack = self.receive(1)
+                end_ack = self.receive(0.5)
                 if(end_ack!=None):
                     rec_end_list = end_ack.split("|")
+                    if(not sack_mode):
 
-                    seq_num = int(rec_end_list[1])
-                    break
+
+                        seq_num = int(rec_end_list[1])
+                        break
+                    else:
+
+                        semicollon = rec_end_list[1].find(';')
+
+                        seq_num = int(rec_end_list[1][:semicollon])
+                        break
                # dat2 = self.receive()
 
             else:
                 dat = self.make_packet("dat", seq_num, packets[seq_num])
                 self.send(dat)
-                data_ack = self.receive(1)
-                if(data_ack !=None):
-                    print(data_ack)
-                    rec_data_list = data_ack.split("|")
+                data_ack = self.receive(0.5)
 
-                    seq_num = int(rec_data_list[1])
+                if(data_ack !=None):
+                    rec_data_list = data_ack.split("|")
+                    if(not sack_mode):
+
+                        seq_num = int(rec_data_list[1])
+                    else:
+                        semicollon = rec_data_list[1].find(';')
+
+                        seq_num = int(rec_data_list[1][:semicollon])
 
 
 
